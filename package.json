@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "acorn-walk": "^8.3.3",
     "escodegen": "^2.1.0"
   }
 }

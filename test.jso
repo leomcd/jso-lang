@@ -1,1 +1,30 @@
-operator
+class Vec2 {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    "+"(o) {
+        return new Vec2(this.x + o.x, this.y + o.y);
+    }
+
+    "-"(o) {
+        return new Vec2(this.x - o.x, this.y - o.y);
+    }
+
+    "u-"() {
+        return new Vec2(-this.x, -this.y);
+    }
+
+    "*"(o) {
+        return new Vec2(this.x * o, this.y * o);
+    }
+
+    "/"(o) {
+        return new Vec2(this.x / o, this.y / o);
+    }
+}
+
+function a(t, b: Node) {
+    
+}
