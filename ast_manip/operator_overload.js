@@ -1,7 +1,4 @@
-const acorn = require("../acornMod.js");
 const { Parser } = require("../acornMod.js");
-
-const p = new Parser();
 
 const overloadables = [
     "+", "-",
@@ -12,128 +9,242 @@ const overloadables = [
     "<", ">", "<=", ">=",
     "<<", ">>", ">>>",
     "++", "--",
-    "%", "*", "**", "/"
+    "%", "*", "**", "/",
+    "+=", "-=", "/=", "*=", //TODO: add more of assignmentoperators
+    //TODO: if += isnt defined, it just does a = a + ... if + is defined
 ]
+
+const ooFuncCode = `
+function __binOp(a, b, opStr, original) {
+    return (a[opStr] ? a[opStr](b) : b[opStr] ? b[opStr](a) : original(a, b))
+}
+function __unOp(a, opStr, original) {
+    return (a[opStr] ? a[opStr]() : original(a))
+}
+function __updateOp(a, opStr, original) {
+    (a[opStr] ? a[opStr]() : original(a));
+    return a;
+}
+function __assignOp(a, b, opStr, original) {
+    (a[opStr] ? a[opStr](b) : original(a, b));
+    return a;
+}
+`;
+
+exports.ooAddToBody = (new Parser({ ecmaVersion: 123123123123 }, ooFuncCode)).parse();
 
 exports.ooVisitors = {
     BinaryExpression(node) {
-        const original = Object.assign(new acorn.Node(p), node);
-
         const left = node.left;
         const right = node.right;
         const operator = node.operator;
+        const opLiteral = {
+            type: "Literal",
+            value: operator,
+            raw: '"' + operator + '"'
+        }
 
         if (!overloadables.includes(operator)) return;
 
-        const opAccLiteral = new acorn.Node(p);
-        opAccLiteral.type = "Literal";
-        opAccLiteral.value = operator;
-        opAccLiteral.raw = '"' + opAccLiteral.value + '"';
+        const newCall = {
+            "type": "CallExpression",
+            "callee": {
+                "type": "Identifier",
+                "name": "__binOp"
+            },
+            "arguments": [
+                left,
+                right,
+                opLiteral,
+                {
+                    "type": "ArrowFunctionExpression",
+                    "id": null,
+                    "expression": true,
+                    "generator": false,
+                    "async": false,
+                    "params": [
+                        {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        {
+                            "type": "Identifier",
+                            "name": "b"
+                        }
+                    ], // HAVE A AND B BE IN HERE
+                    "body": {
+                        "type": "BinaryExpression",
+                        "left": {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        operator,
+                        "right": {
+                            "type": "Identifier",
+                            "name": "b"
+                        }
+                    }
+                }
+            ],
+            "optional": false
+        };
 
-        const mem1 = new acorn.Node(p); //a["OPERATOR"]
-        mem1.type = "MemberExpression";
-        mem1.object = left;
-        mem1.property = opAccLiteral;
-        mem1.computed = true;
-        mem1.optional = false;
-
-        const call1 = new acorn.Node(p); //a["OPERATOR"](b)
-        call1.type = "CallExpression";
-        call1.callee = mem1;
-        call1.arguments = [right];
-        call1.optional = false;
-
-        const mem2 = new acorn.Node(p); //b["OPERATOR"]
-        mem2.type = "MemberExpression";
-        mem2.object = right;
-        mem2.property = opAccLiteral;
-        mem2.computed = true;
-        mem2.optional = false;
-
-        const call2 = new acorn.Node(p); //b["OPERATOR"](a)
-        call2.type = "CallExpression";
-        call2.callee = mem2;
-        call2.arguments = [left];
-        call2.optional = false;
-
-        const cond2 = new acorn.Node(p);
-        cond2.type = "ConditionalExpression";
-        cond2.test = mem2;
-        cond2.consequent = call2;
-        cond2.alternate = original;
-
-        const newCond = new acorn.Node(p);
-        newCond.type = "ConditionalExpression";
-        newCond.test = mem1;
-        newCond.consequent = call1;
-        newCond.alternate = cond2;
-
-        Object.assign(node, newCond);
+        Object.assign(node, newCall);
     },
 
     UnaryExpression(node) {
-        const original = Object.assign(new acorn.Node(p), node);
-
         const argument = node.argument;
         const operator = node.operator;
+        const fixed = ["+", "-"].includes(operator) ? "u" + operator : operator;
+        const opLiteral = {
+            type: "Literal",
+            value: fixed,
+            raw: '"' + fixed + '"'
+        }
 
-        const opAccLiteral = new acorn.Node(p);
-        opAccLiteral.type = "Literal";
-        opAccLiteral.value = "u" + operator;
-        opAccLiteral.raw = '"' + opAccLiteral.value + '"';
+        if (!overloadables.includes(operator)) return;
 
-        const mem = new acorn.Node(p); //a["OPERATOR"]
-        mem.type = "MemberExpression";
-        mem.object = argument;
-        mem.property = opAccLiteral;
-        mem.computed = true;
-        mem.optional = false;
+        const newCall = {
+            "type": "CallExpression",
+            "callee": {
+                "type": "Identifier",
+                "name": "__unOp"
+            },
+            "arguments": [
+                argument,
+                opLiteral,
+                {
+                    "type": "ArrowFunctionExpression",
+                    "id": null,
+                    "expression": true,
+                    "generator": false,
+                    "async": false,
+                    "params": [
+                        {
+                            "type": "Identifier",
+                            "name": "a"
+                        }
+                    ],
+                    "body": {
+                        "type": "UnaryExpression",
+                        "argument": {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        operator
+                    }
+                }
+            ],
+            "optional": false
+        };
 
-        const call = new acorn.Node(p); //a["OPERATOR"]()
-        call.type = "CallExpression";
-        call.callee = mem;
-        call.arguments = [];
-        call.optional = false;
-
-        const newCond = new acorn.Node(p);
-        newCond.type = "ConditionalExpression";
-        newCond.test = mem;
-        newCond.consequent = call;
-        newCond.alternate = original;
-
-        Object.assign(node, newCond);
+        Object.assign(node, newCall);
     },
 
     UpdateExpression(node) {
-        const original = Object.assign(new acorn.Node(p), node);
-
         const argument = node.argument;
         const operator = node.operator;
+        const opLiteral = {
+            type: "Literal",
+            value: operator,
+            raw: '"' + operator + '"'
+        }
 
-        const opAccLiteral = new acorn.Node(p);
-        opAccLiteral.type = "Literal";
-        opAccLiteral.value = operator;
-        opAccLiteral.raw = '"' + opAccLiteral.value + '"';
+        if (!overloadables.includes(operator)) return;
 
-        const mem = new acorn.Node(p); //a["OPERATOR"]
-        mem.type = "MemberExpression";
-        mem.object = argument;
-        mem.property = opAccLiteral;
-        mem.computed = true;
-        mem.optional = false;
+        const newCall = {
+            "type": "CallExpression",
+            "callee": {
+                "type": "Identifier",
+                "name": "__updateOp"
+            },
+            "arguments": [
+                argument,
+                opLiteral,
+                {
+                    "type": "ArrowFunctionExpression",
+                    "id": null,
+                    "expression": true,
+                    "generator": false,
+                    "async": false,
+                    "params": [
+                        {
+                            "type": "Identifier",
+                            "name": "a"
+                        }
+                    ],
+                    "body": {
+                        "type": "UpdateExpression",
+                        "argument": {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        operator,
+                        left: false
+                    }
+                }
+            ],
+            "optional": false
+        };
 
-        const call = new acorn.Node(p); //a["OPERATOR"]()
-        call.type = "CallExpression";
-        call.callee = mem;
-        call.arguments = [];
-        call.optional = false;
+        Object.assign(node, newCall);
+    },
 
-        const newCond = new acorn.Node(p);
-        newCond.type = "ConditionalExpression";
-        newCond.test = mem;
-        newCond.consequent = call;
-        newCond.alternate = original;
+    AssignmentExpression(node) {
+        const left = node.left;
+        const right = node.right;
+        const operator = node.operator;
+        const opLiteral = {
+            type: "Literal",
+            value: operator,
+            raw: '"' + operator + '"'
+        }
 
-        Object.assign(node, newCond);
+        if (!overloadables.includes(operator)) return;
+
+        const newCall = {
+            "type": "CallExpression",
+            "callee": {
+                "type": "Identifier",
+                "name": "__assignOp"
+            },
+            "arguments": [
+                left,
+                right,
+                opLiteral,
+                {
+                    "type": "ArrowFunctionExpression",
+                    "id": null,
+                    "expression": true,
+                    "generator": false,
+                    "async": false,
+                    "params": [
+                        {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        {
+                            "type": "Identifier",
+                            "name": "b"
+                        }
+                    ], // HAVE A AND B BE IN HERE
+                    "body": {
+                        "type": "AssignmentExpression",
+                        "left": {
+                            "type": "Identifier",
+                            "name": "a"
+                        },
+                        operator,
+                        "right": {
+                            "type": "Identifier",
+                            "name": "b"
+                        }
+                    }
+                }
+            ],
+            "optional": false
+        };
+
+        Object.assign(node, newCall);
     }
 }

@@ -3494,10 +3494,9 @@
     var node = this.parseIdentNode();
     this.next(!!liberal);
     if (allowTypes && this.eat(types$1.colon)) { // START CHANGE
-      const typeIden = this.parseIdentTypeNode();
-      node.typeIden = typeIden;
-      this.finishNode(typeIden, "TypeIdentifier");
-      this.next();
+      const typeIdens = this.parseIdentTypeNode();
+      node.typeIdens = typeIdens;
+      //this.next();
     } // END CHANGE
     this.finishNode(node, "Identifier");
     if (!liberal) {
@@ -3530,10 +3529,16 @@
     return node
   };
 
-  pp$5.parseIdentTypeNode = function() { //CHANGED added this function
-    var identNode = this.parseIdentNode();
-    
-    return identNode;
+  pp$5.parseIdentTypeNode = function() { //CHANGED added this function\
+    var identNodes = [];
+
+    do {
+      var newNode = this.parseExprAtom();
+      identNodes.push(newNode);
+    }
+    while (this.eat(types$1.bitwiseOR))
+      
+    return identNodes;
   }
 
   pp$5.parsePrivateIdent = function() {

@@ -1,14 +1,14 @@
 class Vec2 {
-    constructor(x, y) {
+    constructor(x: Number, y: Number) {
         this.x = x;
         this.y = y;
     }
 
-    "+"(o) {
+    "+"(o: Vec2) {
         return new Vec2(this.x + o.x, this.y + o.y);
     }
 
-    "-"(o) {
+    "-"(o: Vec2) {
         return new Vec2(this.x - o.x, this.y - o.y);
     }
 
@@ -16,15 +16,26 @@ class Vec2 {
         return new Vec2(-this.x, -this.y);
     }
 
-    "*"(o) {
+    "*"(o: Number) {
         return new Vec2(this.x * o, this.y * o);
     }
 
-    "/"(o) {
+    "/"(o: Number) {
         return new Vec2(this.x / o, this.y / o);
+    }
+
+    "++"() {
+        console.log(true);
+        this.x++;
+        this.y++;
+    }
+
+    "+="(o: Vec2) {
+        this.x += o.x;
+        this.y += o.y;
     }
 }
 
-function a(t, b: Node) {
-    
-}
+const test = new Vec2(1,1);
+test += new Vec2(2,2);
+console.log(test);
