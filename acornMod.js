@@ -2066,11 +2066,11 @@
       case types$1.bracketL:
         var node = this.startNode();
         this.next();
-        node.elements = this.parseBindingList(types$1.bracketR, true, true);
+        node.elements = this.parseBindingList(types$1.bracketR, true, true, undefined, true); //CHANGED last two arguments
         return this.finishNode(node, "ArrayPattern")
 
       case types$1.braceL:
-        return this.parseObj(true) //TODO: allow types here
+        return this.parseObj(true, undefined, true) //TODO: allow types here
       }
     }
     return this.parseIdent(undefined, allowTypes) //CHANGED;
@@ -2100,7 +2100,7 @@
   };
 
   pp$7.parseAssignableListItem = function(allowModifiers, allowTypes) { //CHANGED
-    var elem = this.parseMaybeDefault(this.start, this.startLoc, undefined, allowTypes);
+    var elem = this.parseMaybeDefault(this.start, this.startLoc, undefined, allowTypes); //CHANGED
     this.parseBindingListItem(elem);
     return elem
   };
@@ -2112,7 +2112,7 @@
   // Parses assignment pattern around given atom if possible.
 
   pp$7.parseMaybeDefault = function(startPos, startLoc, left, allowTypes) { //CHANGED
-    left = left || this.parseBindingAtom(allowTypes);
+    left = left || this.parseBindingAtom(allowTypes); //CHANGED
     if (this.options.ecmaVersion < 6 || !this.eat(types$1.eq)) { return left }
     var node = this.startNodeAt(startPos, startLoc);
     node.left = left;
@@ -3186,7 +3186,7 @@
 
   // Parse an object literal or binding pattern.
 
-  pp$5.parseObj = function(isPattern, refDestructuringErrors) {
+  pp$5.parseObj = function(isPattern, refDestructuringErrors, allowTypes) { //CHANGED final argument
     var node = this.startNode(), first = true, propHash = {};
     node.properties = [];
     this.next();
@@ -3196,14 +3196,14 @@
         if (this.options.ecmaVersion >= 5 && this.afterTrailingComma(types$1.braceR)) { break }
       } else { first = false; }
 
-      var prop = this.parseProperty(isPattern, refDestructuringErrors);
+      var prop = this.parseProperty(isPattern, refDestructuringErrors, allowTypes); //CHANGED final argument
       if (!isPattern) { this.checkPropClash(prop, propHash, refDestructuringErrors); }
       node.properties.push(prop);
     }
     return this.finishNode(node, isPattern ? "ObjectPattern" : "ObjectExpression")
   };
 
-  pp$5.parseProperty = function(isPattern, refDestructuringErrors) {
+  pp$5.parseProperty = function(isPattern, refDestructuringErrors, allowTypes) { //CHANGED final argument
     var prop = this.startNode(), isGenerator, isAsync, startPos, startLoc;
     if (this.options.ecmaVersion >= 9 && this.eat(types$1.ellipsis)) {
       if (isPattern) {
@@ -3233,11 +3233,11 @@
         { isGenerator = this.eat(types$1.star); }
     }
     var containsEsc = this.containsEsc;
-    this.parsePropertyName(prop);
+    this.parsePropertyName(prop, allowTypes);
     if (!isPattern && !containsEsc && this.options.ecmaVersion >= 8 && !isGenerator && this.isAsyncProp(prop)) {
       isAsync = true;
       isGenerator = this.options.ecmaVersion >= 9 && this.eat(types$1.star);
-      this.parsePropertyName(prop);
+      this.parsePropertyName(prop, allowTypes);
     } else {
       isAsync = false;
     }
@@ -3299,7 +3299,7 @@
     } else { this.unexpected(); }
   };
 
-  pp$5.parsePropertyName = function(prop) {
+  pp$5.parsePropertyName = function(prop, allowTypes) { //CHANGED last argument
     if (this.options.ecmaVersion >= 6) {
       if (this.eat(types$1.bracketL)) {
         prop.computed = true;
@@ -3310,7 +3310,7 @@
         prop.computed = false;
       }
     }
-    return prop.key = this.type === types$1.num || this.type === types$1.string ? this.parseExprAtom() : this.parseIdent(this.options.allowReserved !== "never")
+    return prop.key = this.type === types$1.num || this.type === types$1.string ? this.parseExprAtom() : this.parseIdent(this.options.allowReserved !== "never", allowTypes) //CHANGED something
   };
 
   // Initialize empty function node.

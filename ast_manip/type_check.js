@@ -21,7 +21,28 @@ const tcFuncCode = `function __typeCheck(o, types, names) {
 }`
 
 function apply(node) {
-    for (const param of node.params) {
+    let l = Array.from(node.params);
+    let i = 0;
+    for (;;) {
+        if (i > l.length - 1) break;
+
+        let subject = l[i];
+        if (subject.type === "AssignmentPattern") subject = subject.left;
+
+        if (subject.type === "ObjectPattern") {
+            const toAdd = [];
+            subject.properties.forEach(v => toAdd.push(v.value));
+            l = l.slice(0, i).concat(toAdd, l.slice(i + 1));
+        }
+        if (subject.type === "ArrayPattern") {
+            const toAdd = subject.elements;
+            l = l.slice(0, i).concat(toAdd, l.slice(i + 1));
+        }
+        i++;
+    }
+
+    for (let param of l) {
+        if (param.type === "AssignmentPattern") param = param.left;
         const typeIdens = param.typeIdens;
         if (!typeIdens) continue;
 

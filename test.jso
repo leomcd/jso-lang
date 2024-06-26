@@ -25,17 +25,19 @@ class Vec2 {
     }
 
     "++"() {
-        console.log(true);
         this.x++;
         this.y++;
     }
 
-    "+="(o: Vec2) {
-        this.x += o.x;
-        this.y += o.y;
+    ">"(o: Number) {
+        return (this.x > o);
+    }
+    ">="(o: Number) {
+        return (this.x >= o);
     }
 }
 
-const test = new Vec2(1,1);
-test += new Vec2(2,2);
-console.log(test);
+let a = new Vec2(3,3);
+let b = 4;
+
+function check(a: Vec2 = 3, {b: Vec2 = 3} = {}, [c: Vec2 = 3] = []) {}

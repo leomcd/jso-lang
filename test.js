@@ -20,18 +20,42 @@ function __typeCheck(o, types, names) {
     throw new Error('no');
 }
 function __binOp(a, b, opStr, original) {
-    return a[opStr] ? a[opStr](b) : b[opStr] ? b[opStr](a) : original(a, b);
+    if ([
+            '<',
+            '>',
+            '<=',
+            '>='
+        ].includes(opStr))
+        return __relOp(a, b, opStr, original);
+    if (a === undefined || a === null) {
+        if (b === undefined || a === null)
+            return original(a, b);
+        return b[opStr] ? b[opStr](a, true) : original(a, b);
+    }
+    return a[opStr] ? a[opStr](b, false) : b[opStr] ? b[opStr](a, true) : original(a, b);
+}
+function __relOp(a, b, opStr, original) {
+    const opposite = (opStr[0] === '<' ? '>' : '<') + (opStr[1] === '=' ? '' : '=');
+    const reverse = (opStr[0] === '<' ? '>' : '<') + (opStr[1] === '=' ? '=' : '');
+    const opReverse = opStr[0] + (opStr[1] === '=' ? '' : '=');
+    if (!(a === undefined || a === null)) {
+        if (a[opStr])
+            return a[opStr](b);
+        if (a[opposite])
+            return !a[opposite];
+    }
+    if (b === undefined || b === null)
+        return original(a, b);
+    if (b[reverse])
+        return b[reverse](a);
+    if (b[opReverse])
+        return !b[opReverse](a);
+    return original(a, b);
 }
 function __unOp(a, opStr, original) {
+    if (a === undefined || a === null)
+        return original(a);
     return a[opStr] ? a[opStr]() : original(a);
-}
-function __updateOp(a, opStr, original) {
-    a[opStr] ? a[opStr]() : original(a);
-    return a;
-}
-function __assignOp(a, b, opStr, original) {
-    a[opStr] ? a[opStr](b) : original(a, b);
-    return a;
 }
 class Vec2 {
     constructor(x, y) {
@@ -60,16 +84,24 @@ class Vec2 {
         return new Vec2(__binOp(this.x, o, '/', (a, b) => a / b), __binOp(this.y, o, '/', (a, b) => a / b));
     }
     '++'() {
-        console.log(true);
-        __updateOp(this.x, '++', a => a++);
-        __updateOp(this.y, '++', a => a++);
+        this.x['++'] ? this.x['++']() : this.x++;
+        this.y['++'] ? this.y['++']() : this.y++;
     }
-    '+='(o) {
-        __typeCheck(o, [Vec2], ['Vec2']);
-        __assignOp(this.x, o.x, '+=', (a, b) => a += b);
-        __assignOp(this.y, o.y, '+=', (a, b) => a += b);
+    '>'(o) {
+        __typeCheck(o, [Number], ['Number']);
+        return __binOp(this.x, o, '>', (a, b) => a > b);
+    }
+    '>='(o) {
+        __typeCheck(o, [Number], ['Number']);
+        return __binOp(this.x, o, '>=', (a, b) => a >= b);
     }
 }
-const test = new Vec2(1, 1);
-__assignOp(test, new Vec2(2, 2), '+=', (a, b) => a += b);
-console.log(test);
+let a = new Vec2(3, 3);
+let b = 4;
+function check(a = 3, {
+    b = 3
+} = {}, [c = 3] = []) {
+    __typeCheck(c, [Vec2], ['Vec2']);
+    __typeCheck(b, [Vec2], ['Vec2']);
+    __typeCheck(a, [Vec2], ['Vec2']);
+}
